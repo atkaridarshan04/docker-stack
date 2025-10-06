@@ -1,0 +1,188 @@
+services:
+  # --- NGINX ---
+  nginx:
+    image: nginx:latest
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./configs/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    depends_on:
+      flask-app:
+        condition: service_started
+
+  # --- MySQL ---
+  mysql:
+    image: mysql:5.7
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: mydb
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin
+    command: # Enable slow query log and error log
+      [
+        "mysqld",
+        "--general-log=0",
+        "--slow_query_log=1",
+        "--slow_query_log_file=/var/log/mysql/slow.log",
+        "--long_query_time=1",
+        "--log-error=/var/log/mysql/error.log",
+        "--log-bin=/var/log/mysql/mysql-bin",
+        "--server-id=1"
+      ]
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./app/mysql/logs:/var/log/mysql # for MySQL logs
+      - ./app/mysql/message.sql:/docker-entrypoint-initdb.d/message.sql
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  # --- FLASK APP ---
+  flask-app:
+    image: atkaridarshan04/docker-stack-app:v1.0.0
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: flask-app
+    ports:
+      - "5000:5000"
+    # env_file:
+      # - ./app/.env
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin
+      MYSQL_DB: mydb
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # --- GRAFANA ALLOY ---
+  alloy:
+    image: grafana/alloy:v1.10.2
+    container_name: alloy
+    hostname: localhost
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    ports:
+      - "12345:12345"
+    volumes:
+      - ./configs/alloy/config.alloy:/etc/alloy/config.alloy
+      - alloy_data:/var/lib/alloy/data
+      - /:/rootfs:ro
+      - /run:/run:ro
+      - /var/log:/var/log:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker/:ro
+      - /run/udev/data:/run/udev/data:ro
+      - ./app/mysql/logs:/log/mysql:ro # MySQL logs
+    networks:
+      - app-net
+    restart: unless-stopped
+
+  # --- Black BOX EXPORTER (Application METRICS) ---
+  blackbox-exporter:
+    image: prom/blackbox-exporter
+    container_name: blackbox-exporter
+    volumes:
+      - ./configs/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml
+    command:
+      - "--config.file=/etc/blackbox_exporter/config.yml"
+    ports:
+      - "9115:9115"
+    networks:
+      - app-net
+    restart: unless-stopped
+
+  # --- PROMETHEUS ---
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - data_prometheus:/prometheus
+    command: "--config.file=/etc/prometheus/prometheus.yml --web.enable-remote-write-receiver"
+    ports:
+      - "9090:9090"
+    networks:
+      - app-net
+    restart: unless-stopped
+    depends_on:
+      - alloy
+
+  # --- LOKI ---
+  loki:
+    container_name: loki
+    image: docker.io/grafana/loki:3.5.5
+    command: "-config.file=/etc/loki/config.yaml"
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./configs/loki/loki.yml:/etc/loki/config.yaml:ro
+      - data_loki:/loki:rw
+    networks:
+      - app-net
+    restart: unless-stopped
+    depends_on:
+      - alloy
+
+  # --- GRAFANA ---
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./configs/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - app-net
+    restart: unless-stopped
+    depends_on:
+      - loki
+      - prometheus
+
+networks:
+  app-net:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local
+  alloy_data:
+    driver: local
+  data_loki:
+    driver: local
+  data_prometheus:
+    driver: local
+  grafana-data:
+    driver: local
