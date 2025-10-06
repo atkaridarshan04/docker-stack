@@ -1,0 +1,64 @@
+services:
+  mysql:
+    image: mysql:5.7
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: mydb
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin
+    command: # Enable slow query log and error log
+      [
+        "mysqld",
+        "--general-log=0",
+        "--slow_query_log=1",
+        "--slow_query_log_file=/var/log/mysql/slow.log",
+        "--long_query_time=1",
+        "--log-error=/var/log/mysql/error.log",
+        "--log-bin=/var/log/mysql/mysql-bin",
+        "--server-id=1"
+      ]
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql/logs:/var/log/mysql # for MySQL logs
+      - ./mysql/message.sql:/docker-entrypoint-initdb.d/message.sql  
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  flask-app:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: flask-app
+    ports:
+      - "5000:5000"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin
+      MYSQL_DB: mydb
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-net
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  app-net:
+    driver: bridge
+
+volumes:
+  mysql-data:

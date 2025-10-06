@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Flask
+instance/
+.webassets-cache
+
+# Docker
+.dockerignore
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Monitoring data
+prometheus_data/
+grafana_data/
+
+# Trivy reports
+trivy-*.html
+trivy-*.json
+
+# SonarQube
+.sonar/
+.scannerwork/
+# Docker backup files
+*.backup
+
+# Archive directory
+archive/
+
+# Trivy security scan reports
+trivy-*.html
+trivy-results.sarif
