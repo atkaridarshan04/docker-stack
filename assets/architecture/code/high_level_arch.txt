@@ -1,0 +1,25 @@
+// User
+User [icon: user]
+
+// Core Stack
+NGINX [color: blue, icon: server, label: "NGINX (80)"]
+Flask App [color: green, icon: code, label: "Flask App (5000)"]
+MySQL [color: orange, icon: database, label: "MySQL (3306)"]
+
+// Monitoring
+Grafana [color: purple, icon: bar-chart-2, label: "Grafana (3000)"]
+Prometheus [color: red, icon: activity, label: "Prometheus (9090)"]
+Loki [color: yellow, icon: file-text, label: "Loki (3100)"]
+
+// Data Flow
+User > NGINX: HTTP
+NGINX > Flask App: proxy
+Flask App > MySQL: queries
+
+// Monitoring Flow
+Flask App > Prometheus: metrics
+Flask App > Loki: app logs
+MySQL > Loki: db logs
+NGINX > Loki: access logs
+Grafana > Prometheus: dashboards
+Grafana > Loki: logs

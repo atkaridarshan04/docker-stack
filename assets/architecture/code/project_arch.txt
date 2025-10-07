@@ -1,0 +1,58 @@
+> title Docker Stack Architecture
+
+// External
+User [icon: user, color: #2563eb, label: "User"]
+
+// Frontend Layer
+Frontend [icon: layers, color: #1e40af] {
+  NGINX [color: #3b82f6, icon: server, label: "NGINX\nReverse Proxy\n(80)"]
+}
+
+// Application Layer  
+Application [icon: layers, color: #059669] {
+  "Flask App" [color: #10b981, icon: code, label: "Flask Web App\n(5000)"]
+  MySQL [color: #f59e0b, icon: database, label: "MySQL Database\n(3306)"]
+}
+
+// Observability Layer
+Observability [icon: layers, color: #7c3aed] {
+  // Collection Tier
+  Collection [icon: folder, color: #06b6d4] {
+    Alloy [color: #0891b2, icon: cpu, label: "Grafana Alloy\nData Collector\n(12345)"]
+    Blackbox [color: #6b7280, icon: box, label: "Blackbox Exporter\nHealth Monitor\n(9115)"]
+  }
+  
+  // Storage Tier
+  Storage [icon: folder, color: #dc2626] {
+    Prometheus [color: #ef4444, icon: activity, label: "Prometheus\nMetrics Store\n(9090)"]
+    Loki [color: #eab308, icon: file-text, label: "Loki\nLog Store\n(3100)"]
+  }
+  
+  // Visualization Tier
+  Visualization [icon: folder, color: #9333ea] {
+    Grafana [color: #a855f7, icon: bar-chart-2, label: "Grafana\nDashboards\n(3000)"]
+  }
+}
+
+// Infrastructure
+System [color: #9ca3af, icon: server, label: "Host System\nLogs & Metrics"]
+
+// Request Flow
+User > NGINX: "HTTP Requests"
+NGINX > "Flask App": "Proxy Traffic"
+"Flask App" > MySQL: "Database Queries"
+
+// Monitoring Collection
+Alloy > Application: "App and DB Logs & Metrics"
+Alloy > NGINX: "Access Logs"
+Alloy > System: "System Logs"
+Blackbox > NGINX: "Health Probes"
+
+// Data Processing
+Alloy > Prometheus: "Push Metrics"
+Alloy > Loki: "Push Logs"
+Prometheus > Blackbox: "Scrape Health Data"
+
+// Visualization
+Grafana > Prometheus: "Query Metrics"
+Grafana > Loki: "Query Logs"
