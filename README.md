@@ -118,6 +118,17 @@ The stack includes pre-configured Grafana dashboards for comprehensive observabi
 - **Health Monitoring**: Automated service health checks and alerts
 - **Visualization**: Real-time dashboards and analytics
 
+### Domain & SSL Management
+- **NGINX Proxy Manager**: Web-based reverse proxy management with SSL automation
+- **Let's Encrypt Integration**: Automatic SSL certificate generation and renewal
+- **Custom Domain Support**: Easy domain configuration and routing
+
+![NGINX Proxy Manager Interface](./assets/nginx-proxy-manager/app.png)
+
+![Grafana Blackbox Integration](./assets/nginx-proxy-manager/grafana-blackbox.png)
+*Grafana dashboard showing Blackbox monitoring through proxy*
+
+For detailed setup and results, see [Domain and SSL Configuration](./nginx-proxy-manager.md).
 
 ## Clean Up
 

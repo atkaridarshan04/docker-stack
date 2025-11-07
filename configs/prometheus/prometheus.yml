@@ -16,6 +16,13 @@ scrape_configs:
     static_configs:
       - targets:
           - http://nginx:80 # Target to probe with http on port 80.
+          # When using nginx proxy manager
+          # - https://npm.deployzone.duckdns.org
+          # - https://app.deployzone.duckdns.org
+          # - https://grafana.deployzone.duckdns.org
+          # - https://prometheus.deployzone.duckdns.org
+          # - https://alloy.deployzone.duckdns.org
+          # - https://blackbox-exporter.deployzone.duckdns.org
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

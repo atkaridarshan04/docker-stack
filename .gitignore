@@ -60,3 +60,7 @@ archive/
 # Trivy security scan reports
 trivy-*.html
 trivy-results.sarif
+
+# Nginx Proxy Manager data
+configs/nginx-proxy-manager/data/
+configs/nginx-proxy-manager/letsencrypt/

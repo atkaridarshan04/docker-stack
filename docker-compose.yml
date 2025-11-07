@@ -1,5 +1,20 @@
 services:
-  # --- NGINX ---
+  # --- NGINX PROXY MANAGER ---
+  # nginx-proxy-manager:
+  #   image: jc21/nginx-proxy-manager:2.13.1
+  #   container_name: nginx-proxy-manager
+  #   ports:
+  #     - "81:81"
+  #     - "80:80"
+  #     - "443:443"
+  #   networks:
+  #     - app-net
+  #   volumes:
+  #     - ./configs/nginx-proxy-manager/data:/data
+  #     - ./configs/nginx-proxy-manager/letsencrypt:/etc/letsencrypt
+  #   restart: unless-stopped
+
+    # --- NGINX ---
   nginx:
     image: nginx:latest
     container_name: nginx-proxy
@@ -73,7 +88,7 @@ services:
     networks:
       - app-net
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5000/ || exit 1"]
+      test: ["CMD", "python", "-c", "import socket; s = socket.create_connection(('localhost', 5000), timeout=3); s.close()"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -173,7 +188,7 @@ services:
 
 networks:
   app-net:
-    driver: bridge
+    name: app-net
 
 volumes:
   mysql-data:
