@@ -71,10 +71,10 @@ services:
 
   # --- FLASK APP ---
   flask-app:
-    image: atkaridarshan04/docker-stack-app:v1.0.0
-    build:
-      context: .
-      dockerfile: ./Dockerfile
+    image: ghcr.io/atkaridarshan04/docker-stack/flask-app:1.0.0
+    # build:
+    #   context: .
+    #   dockerfile: ./Dockerfile
     container_name: flask-app
     ports:
       - "5000:5000"
