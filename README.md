@@ -4,7 +4,7 @@ A comprehensive Docker-based application stack featuring a Flask web application
 
 ## 🏗️ Architecture Overview
 
-![Docker Stack Architecture](assets/architecture/project_arch.png)
+![Docker Stack Architecture](assets/architecture/project_arch_updated.png)
 *Docker Stack Architecture - Core components and data flow*
 
 This project implements a complete containerized application stack with built-in observability:
