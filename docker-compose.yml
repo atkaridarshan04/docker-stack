@@ -39,11 +39,15 @@ services:
   mysql:
     image: mysql:5.7
     container_name: mysql
+    secrets:
+      - db_root_pw
+      - db_admin_pw
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      # MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_pw # Using Docker secrets for better security
       MYSQL_DATABASE: mydb
       MYSQL_USER: admin
-      MYSQL_PASSWORD: admin
+      MYSQL_PASSWORD_FILE: /run/secrets/db_admin_pw
     command: # Enable slow query log and error log
       [
         "mysqld",
@@ -71,19 +75,21 @@ services:
 
   # --- FLASK APP ---
   flask-app:
-    image: ghcr.io/atkaridarshan04/docker-stack/flask-app:1.0.0
-    # build:
-    #   context: .
-    #   dockerfile: ./Dockerfile
+    image: ghcr.io/atkaridarshan04/docker-stack/flask-app:1.1.0
+    build:
+      context: ./app
+      dockerfile: ./Dockerfile
     container_name: flask-app
     ports:
       - "5000:5000"
+    secrets:
+      - db_admin_pw
     # env_file:
       # - ./app/.env
     environment:
       MYSQL_HOST: mysql
       MYSQL_USER: admin
-      MYSQL_PASSWORD: admin
+      MYSQL_PASSWORD_FILE: /run/secrets/db_admin_pw
       MYSQL_DB: mydb
     networks:
       - app-net
@@ -201,3 +207,9 @@ volumes:
     driver: local
   grafana-data:
     driver: local
+
+secrets:
+  db_root_pw:
+    file: ./secrets/db_root_pw.txt
+  db_admin_pw:
+    file: ./secrets/db_admin_pw.txt

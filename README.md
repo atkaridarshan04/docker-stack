@@ -118,6 +118,13 @@ The stack includes pre-configured Grafana dashboards for comprehensive observabi
 - **Health Monitoring**: Automated service health checks and alerts
 - **Visualization**: Real-time dashboards and analytics
 
+### Security
+- **Docker Secrets**: Production-grade secrets management for database credentials
+- **Read-only Mounts**: Secrets mounted as read-only files in containers
+- **Least Privilege**: Secrets only accessible to services that need them
+
+See [secrets/README.md](./secrets/README.md) for implementation details.
+
 ### Domain & SSL Management
 - **NGINX Proxy Manager**: Web-based reverse proxy management with SSL automation
 - **Let's Encrypt Integration**: Automatic SSL certificate generation and renewal

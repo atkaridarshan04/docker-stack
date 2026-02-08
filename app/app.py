@@ -28,9 +28,19 @@ def log_response(response):
     return response
 
 # Fetch MySQL config from environment
-app.config['MYSQL_HOST'] = os.environ['MYSQL_HOST']
+secret_path = os.environ.get('MYSQL_PASSWORD_FILE')
+
+if secret_path and os.path.exists(secret_path):
+    with open(secret_path, 'r') as f:
+        app.config['MYSQL_PASSWORD'] = f.read().strip()
+    logger.info("MySQL Password loaded from Secret File.")
+else:
+    # Fallback for local development or if Secret File isn't used
+    app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQL_PASSWORD')
+    logger.warning("MySQL Password loaded from Environment/Fallback.")
+
+app.config['MYSQL_HOST'] = os.environ.get('MYSQL_HOST', 'localhost')
 app.config['MYSQL_USER'] = os.environ['MYSQL_USER']
-app.config['MYSQL_PASSWORD'] = os.environ['MYSQL_PASSWORD']
 app.config['MYSQL_DB'] = os.environ['MYSQL_DB']
 
 # Initialize MySQL
