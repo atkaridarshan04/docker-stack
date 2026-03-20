@@ -1,15 +1,9 @@
-/* Grafana Alloy Configuration Examples
- * ---
- * LINK: For more details, visit https://github.com/grafana/alloy-scenarios
-*/
-
-// SECTION: TARGETS
+// ── DESTINATIONS ────────────────────────────────────────────────────────────
 
 loki.write "default" {
-	endpoint {
-		url = "http://loki:3100/loki/api/v1/push"
-	}
-	external_labels = {}
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
 }
 
 prometheus.remote_write "default" {
@@ -18,26 +12,14 @@ prometheus.remote_write "default" {
   }
 }
 
-// !SECTION
-
-// SECTION: SYSTEM LOGS & JOURNAL
+// ── SYSTEM LOGS ─────────────────────────────────────────────────────────────
 
 loki.source.journal "journal" {
-  max_age       = "24h0m0s"
+  max_age       = "24h"
   relabel_rules = discovery.relabel.journal.rules
   forward_to    = [loki.write.default.receiver]
-  labels        = {component = string.format("%s-journal", constants.hostname)}
-  // NOTE: This is important to fix https://github.com/grafana/alloy/issues/924
-  path          = "/var/log/journal" 
-}
-
-local.file_match "system" {
-  path_targets = [{
-    __address__ = "localhost",
-    __path__    = "/var/log/{syslog,messages,*.log}",
-    instance    = constants.hostname,
-    job         = string.format("%s-logs", constants.hostname),
-  }]
+  labels        = {job = "systemd-journal"}
+  path          = "/var/log/journal"
 }
 
 discovery.relabel "journal" {
@@ -45,10 +27,6 @@ discovery.relabel "journal" {
   rule {
     source_labels = ["__journal__systemd_unit"]
     target_label  = "unit"
-  }
-  rule {
-    source_labels = ["__journal__boot_id"]
-    target_label  = "boot_id"
   }
   rule {
     source_labels = ["__journal__transport"]
@@ -60,30 +38,24 @@ discovery.relabel "journal" {
   }
 }
 
-loki.source.file "system" {
-  targets    = local.file_match.system.targets
+local.file_match "system_logs" {
+  path_targets = [{
+    __address__ = "localhost",
+    __path__    = "/var/log/{syslog,messages,*.log}",
+    job         = "system-logs",
+  }]
+}
+
+loki.source.file "system_logs" {
+  targets    = local.file_match.system_logs.targets
   forward_to = [loki.write.default.receiver]
 }
 
-// !SECTION
+// ── SYSTEM METRICS ──────────────────────────────────────────────────────────
 
-// SECTION: SYSTEM METRICS
-
-discovery.relabel "metrics" {
-  targets = prometheus.exporter.unix.metrics.targets
-  rule {
-    target_label = "instance"
-    replacement  = constants.hostname
-  }
-  rule {
-    target_label = "job"
-    replacement = string.format("%s-metrics", constants.hostname)
-  }
-}
-
-prometheus.exporter.unix "metrics" {
+prometheus.exporter.unix "node" {
   disable_collectors = ["ipvs", "btrfs", "infiniband", "xfs", "zfs"]
-  enable_collectors = ["meminfo"]
+  enable_collectors  = ["meminfo"]
   filesystem {
     fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|tmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
     mount_points_exclude = "^/(dev|proc|run/credentials/.+|sys|var/lib/docker/.+)($|/)"
@@ -97,70 +69,79 @@ prometheus.exporter.unix "metrics" {
   }
 }
 
-prometheus.scrape "metrics" {
-scrape_interval = "15s"
-  targets    = discovery.relabel.metrics.output
-  forward_to = [prometheus.remote_write.default.receiver]
+discovery.relabel "node" {
+  targets = prometheus.exporter.unix.node.targets
+  rule {
+    target_label = "job"
+    replacement  = "node-exporter"
+  }
 }
 
-// !SECTION
-
-// SECTION: DOCKER METRICS
-
-prometheus.exporter.cadvisor "dockermetrics" {
-  docker_host = "unix:///var/run/docker.sock"
-  storage_duration = "5m"
+prometheus.scrape "node" {
+  scrape_interval = "15s"
+  targets         = discovery.relabel.node.output
+  forward_to      = [prometheus.remote_write.default.receiver]
 }
 
-prometheus.scrape "dockermetrics" {
-  targets    = prometheus.exporter.cadvisor.dockermetrics.targets
-  forward_to = [ prometheus.remote_write.default.receiver ]
-  scrape_interval = "10s"
-}
+// ── DOCKER METRICS (scraped from standalone cAdvisor) ────────────────────────
+// cAdvisor runs as its own container — Prometheus scrapes it directly.
+// See prometheus.yml job: cadvisor
 
-//!SECTION
+// ── DOCKER LOGS ──────────────────────────────────────────────────────────────
 
-// SECTION: DOCKER LOGS
-
-discovery.docker "dockerlogs" {
+discovery.docker "containers" {
   host = "unix:///var/run/docker.sock"
 }
 
-discovery.relabel "dockerlogs" {
-      targets = []
-  
-      rule {
-          source_labels = ["__meta_docker_container_name"]
-          regex = "/(.*)"
-          target_label = "service_name"
-      }
-
+discovery.relabel "docker_logs" {
+  targets = discovery.docker.containers.targets
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
   }
-
-loki.source.docker "default" {
-  host       = "unix:///var/run/docker.sock"
-  targets    = discovery.docker.dockerlogs.targets
-  labels     = {"platform" = "docker"}
-  relabel_rules = discovery.relabel.dockerlogs.rules
-  forward_to = [loki.write.default.receiver]
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
 }
 
-// !SECTION
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.containers.targets
+  labels        = {job = "docker"}
+  relabel_rules = discovery.relabel.docker_logs.rules
+  forward_to    = [loki.write.default.receiver]
+}
 
-// SECTION: MYSQL LOGS
+// ── MYSQL SLOW QUERY LOG ─────────────────────────────────────────────────────
+// MySQL error log goes to stderr → collected automatically via Docker logs above.
+// Slow query log is file-based and multi-line — each entry starts with "# Time:"
+// or "# User@Host:". We use multiline merging so each query = one Loki entry.
 
-local.file_match "mysql" {
+local.file_match "mysql_slow_log" {
   path_targets = [{
     __address__ = "localhost",
-    __path__    = "/logs/mysql/*.log",
-    instance    = constants.hostname,
-    job         = "mysql",
+    __path__    = "/alloy/mysql-logs/slow.log",
+    job         = "mysql-slow",
   }]
 }
 
-loki.source.file "mysql" {
-  targets    = local.file_match.mysql.targets
-  forward_to = [loki.write.default.receiver]
+loki.source.file "mysql_slow_log" {
+  targets    = local.file_match.mysql_slow_log.targets
+  forward_to = [loki.process.mysql_slow_log.receiver]
 }
 
-// !SECTION
+loki.process "mysql_slow_log" {
+  stage.multiline {
+    firstline     = "^# (Time|User@Host)"
+    max_wait_time = "3s"
+  }
+  stage.regex {
+    expression = "Query_time: (?P<query_time>[0-9.]+)"
+  }
+  stage.labels {
+    values = { query_time = "" }
+  }
+  forward_to = [loki.write.default.receiver]
+}

@@ -1,35 +1,42 @@
 global:
   scrape_interval: 15s
+  evaluation_interval: 15s
 
 scrape_configs:
-  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
-  - job_name: 'prometheus'
-    # Override the global default and scrape targets from this job every 5 seconds.
-    scrape_interval: 5s
-    static_configs:
-      - targets: ['localhost:9090']
 
-  - job_name: "blackbox"
+  - job_name: prometheus
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['prometheus:9090']
+
+  - job_name: flask-app
+    static_configs:
+      - targets: ['flask-app:5000']
+
+  - job_name: cadvisor
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  - job_name: mysqld-exporter
+    static_configs:
+      - targets: ['mysqld-exporter:9104']
+
+  - job_name: blackbox-http
     metrics_path: /probe
     params:
-      module: [http_2xx] # Look for a HTTP 200 response.
+      module: [http_2xx]
     static_configs:
       - targets:
-          - http://nginx:80 # Target to probe with http on port 80.
-          # When using nginx proxy manager
-          # - https://npm.deployzone.duckdns.org
-          # - https://app.deployzone.duckdns.org
-          # - https://grafana.deployzone.duckdns.org
-          # - https://prometheus.deployzone.duckdns.org
-          # - https://alloy.deployzone.duckdns.org
-          # - https://blackbox-exporter.deployzone.duckdns.org
+          - http://nginx:80
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: blackbox-exporter:9115 # The blackbox exporter's real hostname:port.
-  - job_name: "blackbox_exporter" # collect blackbox exporter's operational metrics.
+        replacement: blackbox-exporter:9115
+
+  - job_name: blackbox-exporter
     static_configs:
-      - targets: ["blackbox-exporter:9115"]
+      - targets: ['blackbox-exporter:9115']
