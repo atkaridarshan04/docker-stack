@@ -1,0 +1,10 @@
+.env
+.env.*
+__pycache__/
+*.py[cod]
+*.pyo
+mysql/logs/
+*.log
+.git
+.gitignore
+README.md
