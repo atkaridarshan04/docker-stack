@@ -1,0 +1,171 @@
+{
+  "id": null, "uid": "stack-overview", "title": "Stack Overview",
+  "tags": ["overview", "home"], "timezone": "browser",
+  "schemaVersion": 38, "version": 1, "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 100, "title": "APP", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "collapsed": false
+    },
+    {
+      "id": 1, "title": "App Status", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "probe_success{job=\"blackbox-http\"}", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }], "thresholds": { "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } } }
+    },
+    {
+      "id": 2, "title": "Request Rate", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "sum(rate(flask_http_request_total{job=\"flask-app\"}[2m]))", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 2, "thresholds": { "steps": [{ "color": "green", "value": null }] } } }
+    },
+    {
+      "id": 3, "title": "Error Rate", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "sum(rate(flask_http_request_total{job=\"flask-app\", status=~\"[45]..\"}[2m]))", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 3, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.01 }, { "color": "red", "value": 0.1 }] } } }
+    },
+    {
+      "id": 4, "title": "p95 Latency", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(flask_http_request_duration_seconds_bucket{job=\"flask-app\"}[2m])) by (le))", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "red", "value": 1 }] } } }
+    },
+    {
+      "id": 5, "title": "Request Rate", "type": "timeseries",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [
+        { "expr": "sum(rate(flask_http_request_total{job=\"flask-app\", status=~\"2..\"}[2m]))", "legendFormat": "2xx", "refId": "A" },
+        { "expr": "sum(rate(flask_http_request_total{job=\"flask-app\", status=~\"[45]..\"}[2m]))", "legendFormat": "errors", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 10, "lineWidth": 2 } },
+        "overrides": [{ "matcher": { "id": "byName", "options": "errors" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] }]
+      },
+      "options": { "tooltip": { "mode": "multi" } },
+      "links": [{ "title": "Flask Dashboard", "url": "/d/flask-app/flask-application" }]
+    },
+    {
+      "id": 200, "title": "INFRASTRUCTURE", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 }, "collapsed": false
+    },
+    {
+      "id": 6, "title": "CPU Usage", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 70 }, { "color": "red", "value": 90 }] } } }
+    },
+    {
+      "id": 7, "title": "Memory Used", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 75 }, { "color": "red", "value": 90 }] } } }
+    },
+    {
+      "id": 8, "title": "Disk Used", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "(1 - node_filesystem_avail_bytes{mountpoint=\"/\", fstype!=\"tmpfs\"} / node_filesystem_size_bytes{mountpoint=\"/\", fstype!=\"tmpfs\"}) * 100", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 75 }, { "color": "red", "value": 90 }] } } }
+    },
+    {
+      "id": 9, "title": "Running Containers", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "count(container_last_seen{name=~\".+\"})", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "green", "value": null }] } } }
+    },
+    {
+      "id": 10, "title": "CPU & Memory per Container", "type": "timeseries",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "topk(5, rate(container_cpu_usage_seconds_total{name=~\".+\"}[2m]) * 100)", "legendFormat": "{{name}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "percent", "custom": { "fillOpacity": 5, "lineWidth": 2 } } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "links": [{ "title": "Container Dashboard", "url": "/d/docker-containers/docker-containers" }]
+    },
+    {
+      "id": 300, "title": "DATABASE", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 }, "collapsed": false
+    },
+    {
+      "id": 11, "title": "MySQL Uptime", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 15 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "mysql_global_status_uptime{job=\"mysqld-exporter\"}", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "s", "thresholds": { "steps": [{ "color": "green", "value": null }] } } }
+    },
+    {
+      "id": 12, "title": "Queries/s", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 15 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "rate(mysql_global_status_questions{job=\"mysqld-exporter\"}[2m])", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "ops", "decimals": 1, "thresholds": { "steps": [{ "color": "green", "value": null }] } } }
+    },
+    {
+      "id": 13, "title": "Slow Queries/s", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 15 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "rate(mysql_global_status_slow_queries{job=\"mysqld-exporter\"}[2m])", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "ops", "decimals": 3, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.1 }, { "color": "red", "value": 1 }] } } }
+    },
+    {
+      "id": 14, "title": "Connections", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 15 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "mysql_global_status_threads_connected{job=\"mysqld-exporter\"}", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 50 }, { "color": "red", "value": 100 }] } } }
+    },
+    {
+      "id": 15, "title": "MySQL Query Rate", "type": "timeseries",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 15 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [
+        { "expr": "rate(mysql_global_status_commands_total{job=\"mysqld-exporter\", command=\"select\"}[2m])", "legendFormat": "SELECT", "refId": "A" },
+        { "expr": "rate(mysql_global_status_commands_total{job=\"mysqld-exporter\", command=~\"insert|update|delete\"}[2m])", "legendFormat": "{{command}}", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "fillOpacity": 8, "lineWidth": 2 } } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "links": [{ "title": "MySQL Dashboard", "url": "/d/mysql-overview/mysql" }]
+    },
+    {
+      "id": 400, "title": "LOGS", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 }, "collapsed": false
+    },
+    {
+      "id": 16, "title": "Log Volume by Container", "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 22 },
+      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "targets": [{ "expr": "sum by (container) (count_over_time({job=\"docker\"}[$__interval]))", "legendFormat": "{{container}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 15, "lineWidth": 1, "drawStyle": "bars", "stacking": { "mode": "normal" } } } },
+      "options": { "tooltip": { "mode": "multi" } },
+      "links": [{ "title": "Container Logs", "url": "/d/loki-container-logs/container-logs" }]
+    },
+    {
+      "id": 17, "title": "Recent Errors (all containers)", "type": "logs",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
+      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "targets": [{ "expr": "{job=\"docker\"} |~ \"(?i)(error|exception|fatal|critical|traceback)\"", "refId": "A" }],
+      "options": { "dedupStrategy": "signature", "enableLogDetails": true, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false }
+    }
+  ]
+}

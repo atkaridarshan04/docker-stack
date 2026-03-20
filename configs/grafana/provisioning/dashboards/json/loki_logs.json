@@ -1,0 +1,65 @@
+{
+  "id": null,
+  "uid": "loki-container-logs",
+  "title": "Container Logs",
+  "tags": ["logs", "loki", "docker"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 2,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "container",
+        "label": "Container",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+        "query": { "label": "container", "stream": "", "type": 1 },
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Log Volume by Container",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "targets": [{ "expr": "sum by (container) (count_over_time({job=\"docker\", container=~\"$container\"}[$__interval]))", "legendFormat": "{{container}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 15, "lineWidth": 1, "drawStyle": "bars", "stacking": { "mode": "normal" } } } },
+      "options": { "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 2,
+      "title": "Container Logs",
+      "type": "logs",
+      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 6 },
+      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "targets": [{ "expr": "{job=\"docker\", container=~\"$container\"}", "refId": "A" }],
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true }
+    },
+    {
+      "id": 3,
+      "title": "MySQL Slow Query Log",
+      "type": "logs",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 22 },
+      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "targets": [{ "expr": "{job=\"mysql\"}", "refId": "A" }],
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true }
+    },
+    {
+      "id": 4,
+      "title": "System Journal (errors/warnings)",
+      "type": "logs",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 32 },
+      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "targets": [{ "expr": "{job=\"systemd-journal\"} |= \"error\" or {job=\"systemd-journal\"} |= \"warning\" or {job=\"systemd-journal\"} |= \"failed\"", "refId": "A" }],
+      "options": { "dedupStrategy": "signature", "enableLogDetails": true, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true }
+    }
+  ]
+}
