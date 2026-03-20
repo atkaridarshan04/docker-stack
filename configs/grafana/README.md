@@ -1,198 +1,73 @@
-# Grafana Configuration
+# Grafana
 
-## Overview
+Grafana is the visualization layer. It reads from both Prometheus (metrics) and Loki (logs) and serves pre-built dashboards that are provisioned automatically on startup — no manual import or configuration needed.
 
-**Grafana** is an open-source analytics and interactive visualization web application. It provides charts, graphs, and alerts when connected to supported data sources. In this setup, Grafana serves as the primary visualization and dashboarding platform for monitoring the entire Docker stack.
+## Access
 
-## Role in Current Setup
+`http://localhost:3000` — default credentials: `admin` / `admin`
 
-Grafana acts as the central monitoring dashboard that:
-- **Visualizes metrics** from Prometheus (system, container, and application metrics)
-- **Displays logs** from Loki (system, container, and application logs)
-- **Provides pre-configured dashboards** for comprehensive monitoring
-- **Enables alerting** based on metrics and log patterns
-- **Offers unified observability** across the entire infrastructure
+## Provisioning
 
-## Configuration Structure
-
-The Grafana configuration uses provisioning to automatically set up data sources and dashboards:
+Everything under `provisioning/` is mounted into the container at `/etc/grafana/provisioning/` and loaded automatically when Grafana starts.
 
 ```
-configs/grafana/provisioning/
+provisioning/
 ├── datasources/
-│   └── datasources.yml          # Data source configurations
+│   └── datasources.yml     # Prometheus + Loki connections
 └── dashboards/
-    ├── dashboards.yml           # Dashboard provider configuration
-    ├── 1860_rev42.json         # Node Exporter Dashboard
-    ├── 193_rev1.json           # Docker Container Dashboard
-    ├── 7587_rev3.json          # MySQL Dashboard
-    └── 13639_rev2.json         # Blackbox Exporter Dashboard
+    ├── dashboards.yml       # Tells Grafana where to find dashboard JSON files
+    └── json/                # Dashboard JSON files — one file per dashboard
 ```
 
-## Data Sources Configuration
+### Datasources (`datasources/datasources.yml`)
 
-### datasources.yml
+| Name | Type | URL | UID |
+|------|------|-----|-----|
+| Prometheus | prometheus | `http://prometheus:9090` | `PBFA97CFB590B2093` |
+| Loki | loki | `http://loki:3100` | `P8E80F9AEF21F6940` |
 
-```yaml
-apiVersion: 1
+UIDs are hardcoded so dashboard JSON files can reference them reliably without depending on auto-generated IDs.
 
-datasources:
-  # Prometheus data source for metrics
-  - name: Prometheus
-    type: prometheus
-    access: proxy                    # Access through Grafana backend
-    url: http://prometheus:9090      # Internal Docker network URL
-    uid: PBFA97CFB590B2093          # Unique identifier
-    isDefault: true                  # Default data source for new panels
-    editable: true                   # Allow editing in UI
+### Dashboard Provider (`dashboards/dashboards.yml`)
 
-  # Loki data source for logs
-  - name: Loki
-    type: loki
-    access: proxy                    # Access through Grafana backend
-    url: http://loki:3100           # Internal Docker network URL
-    uid: P8E80F9AEF21F6940          # Unique identifier
-    editable: true                   # Allow editing in UI
-```
+Watches `/etc/grafana/provisioning/dashboards/json/` and loads all `.json` files as dashboards. `updateIntervalSeconds: 30` means changes to JSON files are picked up within 30 seconds without restarting Grafana.
 
-**Key Features:**
-- **Automatic provisioning**: Data sources are configured on startup
-- **Proxy access**: Requests go through Grafana server (secure)
-- **Internal networking**: Uses Docker service names for connectivity
-- **Editable**: Can be modified through Grafana UI
+## Dashboards
 
-## Dashboard Provisioning
+All dashboards use modern Grafana panel types (`timeseries`, `stat`, `logs`, `table`). No deprecated `graph` or `singlestat` panels.
 
-### dashboards.yml
+| File | Dashboard | Data Source | Description |
+|------|-----------|-------------|-------------|
+| `overview.json` | Stack Overview | Prometheus + Loki | Single-pane-of-glass across all services. Rows for App, Infrastructure, Database, Logs. Each section links to the detailed dashboard. |
+| `flask_app.json` | Flask Application | Prometheus | Request rate, error rate, p50/p95/p99 latency, per-endpoint breakdown, uptime status. Panels link to Container Logs filtered to `flask-app`. |
+| `docker_containers.json` | Docker Containers | Prometheus | Per-container CPU %, memory working set, network in/out, resource summary table. Panels link to Container Logs filtered to the clicked container. |
+| `mysql.json` | MySQL | Prometheus + Loki | Query throughput by type (SELECT/INSERT/UPDATE/DELETE), connections vs max, InnoDB buffer pool breakdown, network traffic, slow query log panel. |
+| `loki_logs.json` | Container Logs | Loki | Log volume by container (stacked bars), live container log viewer (filterable by container), MySQL slow query log, system journal errors. |
+| `1860_rev42.json` | Node Exporter Full | Prometheus | Full host system metrics — CPU, memory, disk, network, filesystem, processes. |
+| `blackbox_exporter.json` | Prometheus Blackbox Exporter | Prometheus | HTTP probe status, response time breakdown by phase (connect/processing/transfer), probe success history. |
 
-```yaml
-apiVersion: 1
+### Cross-Dashboard Links
 
-providers:
-  - name: 'default'                    # Provider name
-    orgId: 1                          # Organization ID (default org)
-    folder: ''                        # Root folder (no subfolder)
-    type: file                        # File-based provisioning
-    disableDeletion: false            # Allow dashboard deletion
-    updateIntervalSeconds: 10         # Check for updates every 10 seconds
-    allowUiUpdates: true              # Allow UI modifications
-    options:
-      path: /etc/grafana/provisioning/dashboards  # Dashboard files location
-```
+Dashboards are linked so you can drill from metrics to logs without losing context:
 
-**Configuration Details:**
-- **Automatic loading**: Dashboards are imported on startup
-- **File watching**: Updates dashboards when files change
-- **UI integration**: Allows modifications through Grafana interface
-- **Version control**: Dashboard JSON files can be version controlled
+- **Docker Containers** → click any container series → jumps to Container Logs filtered to that container
+- **Flask Application** panels → "View Flask Logs" → Container Logs filtered to `flask-app`
+- **MySQL** panels → "View MySQL Error Logs" → Container Logs filtered to `mysql`
+- **Stack Overview** each section → links to the detailed dashboard for that service
 
-## Pre-configured Dashboards
+## Environment Variables
 
-### 1. Node Exporter Dashboard (ID: 1860)
-**File**: `1860_rev42.json`
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GF_SECURITY_ADMIN_PASSWORD` | `admin` | Grafana admin password |
+| `GF_ANALYTICS_REPORTING_ENABLED` | `false` | Disable telemetry to Grafana Labs |
+| `GF_ANALYTICS_CHECK_FOR_UPDATES` | `false` | Disable update checks |
+| `GF_LOG_LEVEL` | `warn` | Reduce log verbosity |
 
-**Purpose**: System-level monitoring
-- **CPU Usage**: Utilization, load average, context switches
-- **Memory**: Usage, available, swap utilization
-- **Disk I/O**: Read/write operations, disk space usage
-- **Network**: Traffic, packet rates, error rates
-- **System**: Uptime, file descriptor usage, processes
+## Adding a New Dashboard
 
-**Key Metrics:**
-- `node_cpu_seconds_total`
-- `node_memory_MemAvailable_bytes`
-- `node_disk_io_time_seconds_total`
-- `node_network_receive_bytes_total`
-
-### 2. Docker Container Dashboard (ID: 193)
-**File**: `193_rev1.json`
-
-**Purpose**: Container resource monitoring
-- **Container CPU**: Usage per container, throttling
-- **Container Memory**: Usage, limits, cache
-- **Container Network**: Traffic per container
-- **Container Filesystem**: Disk usage per container
-- **Container Status**: Running, stopped, restart counts
-
-**Key Metrics:**
-- `container_cpu_usage_seconds_total`
-- `container_memory_usage_bytes`
-- `container_network_receive_bytes_total`
-- `container_fs_usage_bytes`
-
-### 3. MySQL Dashboard (ID: 7587)
-**File**: `7587_rev3.json`
-
-**Purpose**: Database performance monitoring
-- **Connection Metrics**: Active connections, connection rate
-- **Query Performance**: Query rate, slow queries, execution time
-- **InnoDB Metrics**: Buffer pool usage, row operations
-- **Replication**: Master/slave status, lag
-- **Table Locks**: Lock waits, lock time
-
-**Key Metrics:**
-- `mysql_global_status_connections`
-- `mysql_global_status_queries`
-- `mysql_global_status_slow_queries`
-- `mysql_global_status_innodb_buffer_pool_pages_total`
-
-### 4. Blackbox Exporter Dashboard (ID: 13639)
-**File**: `13639_rev2.json`
-
-**Purpose**: External service monitoring
-- **Probe Success Rate**: Service availability over time
-- **Response Time**: HTTP response times, DNS lookup time
-- **SSL Certificate**: Certificate expiry monitoring
-- **HTTP Status Codes**: Distribution of response codes
-- **Probe Duration**: Time taken for different probe types
-
-**Key Metrics:**
-- `probe_success`
-- `probe_duration_seconds`
-- `probe_http_status_code`
-- `probe_ssl_earliest_cert_expiry`
-
-## Volume Mounts
-
-```yaml
-volumes:
-  - grafana-data:/var/lib/grafana                           # Persistent data storage
-  - ./configs/grafana/provisioning:/etc/grafana/provisioning # Configuration provisioning
-```
-
-**Mount Details:**
-- **grafana-data**: Stores dashboards, users, settings, and other persistent data
-- **provisioning**: Contains data source and dashboard configurations
-
-## Network Configuration
-
-- **Port**: 3000 (Web UI)
-- **Network**: app-net (internal Docker network)
-- **Dependencies**: Loki, Prometheus (for data sources)
-- **Access**: http://localhost:3000
-
-## Default Credentials
-
-- **Username**: admin
-- **Password**: admin (should be changed on first login)
-
-## Key Features
-
-### Visualization Capabilities
-1. **Time Series Graphs**: CPU, memory, network metrics over time
-2. **Heatmaps**: Performance distribution analysis
-3. **Tables**: Detailed metric breakdowns
-4. **Stat Panels**: Current values and trends
-5. **Logs Panel**: Real-time log streaming and search
-
-### Alerting Features
-1. **Metric-based Alerts**: CPU, memory, disk thresholds
-2. **Log-based Alerts**: Error pattern detection
-3. **Multi-channel Notifications**: Email, Slack, webhook
-4. **Alert Rules**: Complex conditions and expressions
-
-### Data Exploration
-1. **Query Builder**: Visual query construction
-2. **Explore Mode**: Ad-hoc data investigation
-3. **Log Correlation**: Link metrics to related logs
-4. **Variable Templates**: Dynamic dashboard filtering
+1. Build or export the dashboard JSON from Grafana UI
+2. Ensure all datasource references use the hardcoded UIDs (`PBFA97CFB590B2093` for Prometheus, `P8E80F9AEF21F6940` for Loki)
+3. Set `"id": null` and assign a unique `"uid"` string
+4. Drop the file into `configs/grafana/provisioning/dashboards/json/`
+5. Grafana picks it up within 30 seconds — no restart needed

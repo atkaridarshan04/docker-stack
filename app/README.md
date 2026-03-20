@@ -1,25 +1,55 @@
+# Flask App
 
-# Flask MySQL App
+A message board web application built with Flask and MySQL. Users can create, edit, and delete messages. Exposes Prometheus metrics at `/metrics` and a health check at `/health`.
 
-This is a simple Flask app that interacts with a MySQL database. The app allows users to submit messages, which are then stored in the database and displayed on the frontend.
+## Endpoints
 
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | Message board UI |
+| POST | `/submit` | Create a message — body: `new_message=<text>` |
+| POST | `/edit/<id>` | Update a message — body: `updated_message=<text>` |
+| POST | `/delete/<id>` | Delete a message |
+| GET | `/health` | Returns `{"status":"healthy"}` (200) if DB is reachable, `{"status":"unhealthy"}` (500) otherwise |
+| GET | `/metrics` | Prometheus metrics |
 
-## Run the application
+## Metrics
 
-1. Start the containers using Docker Compose:
+`PrometheusMetrics(app)` auto-instruments all routes:
 
-   ```bash
-   docker-compose up --build -d
-   ```
+| Metric | Type | Labels |
+|--------|------|--------|
+| `flask_http_request_total` | Counter | `method`, `status` |
+| `flask_http_request_duration_seconds` | Histogram | `method`, `path`, `status` |
 
-2. Interact with the app:
+Scraped by Prometheus every 15s. Visualized in the **Flask Application** Grafana dashboard.
 
-   - Visit http://localhost:5000 to see the application. You can submit new messages using the form.
+## Environment Variables
 
-## Cleaning Up
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MYSQL_HOST` | `localhost` | MySQL hostname |
+| `MYSQL_USER` | `admin` | MySQL user |
+| `MYSQL_DB` | `mydb` | MySQL database name |
+| `MYSQL_PASSWORD_FILE` | — | Path to Docker secret file containing the DB password |
+| `FLASK_DEBUG` | `0` | Always off in production |
 
-```bash
-docker-compose down
+## Secrets
+
+The DB password is read from the Docker secret file at startup, never from a plain env var:
+
+```python
+with open(os.environ['MYSQL_PASSWORD_FILE']) as f:
+    app.config['MYSQL_PASSWORD'] = f.read().strip()
 ```
 
----
+Falls back to `MYSQL_PASSWORD` env var if the secret file is not present (local dev only).
+
+## Build
+
+```bash
+docker compose build flask-app
+docker compose up -d flask-app
+```
+
+Image: `python:3.12-slim`, non-root user `app`, served by Gunicorn (`2 workers, 4 threads, 60s timeout`).
