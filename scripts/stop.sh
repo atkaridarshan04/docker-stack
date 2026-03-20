@@ -1,15 +1,10 @@
 #!/bin/bash
-# Stop all services and optionally remove volumes
+# Stop all services (data volumes are preserved)
+# To also delete all data: docker compose down -v
 
 set -e
 
 echo "Stopping all services..."
-docker compose -f docker-compose.yml down -v
+docker compose -f docker-compose.yml down
 
-# Uncomment the following lines if you dont want to remove volumes
-# docker compose -f docker-compose.yml down
-
-# echo "Removing MySQL volume..."
-# docker volume rm docker-stack_mysql-data || true
-
-echo "Cleanup complete."
+echo "Done. Data volumes preserved."
