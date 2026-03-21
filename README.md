@@ -21,7 +21,7 @@ This project is a fully containerized application stack built with production pr
 
 ## 🏗️ Architecture Overview
 
-![Architecture](assets/architecture/project_arch_updated.png)
+![Architecture](assets/architecture/project_arch-light.png)
 
 
 ## Prerequisites
@@ -182,14 +182,30 @@ docker-stack/
 ![Prometheus Targets](assets/prometheus-targets.png)
 
 ### Alloy
-![Alloy UI](assets/alloy.png)
-![Alloy Graph](assets/alloy-graph.png)
+<table>
+  <tr>
+    <td width="50%"><img src="assets/alloy.png" alt="Alloy Metrics" width="100%"></td>
+    <td width="50%"><img src="assets/alloy-graph.png" alt="Alloy Logs" width="100%"></td>
+  </tr>
+</table>
 
 ### Grafana
-![Dashboards](assets/grafana/dashboards.png)
-![Data Sources](assets/grafana/datasource.png)
-![Node Exporter](assets/grafana/dash-node-exporter.png)
-![Docker Containers](assets/grafana/dash-docker-monitoring.png)
-![Blackbox Exporter](assets/grafana/dash-blackbox-exporter.png)
-![Log Drilldown](assets/grafana/drilldown-logs.png)
-![Metrics Drilldown](assets/grafana/drilldown-metrics.png)
+
+<table>
+  <tr>
+    <td width="50%"><img src="assets/grafana/dashboards.png" alt="Dashboards" width="100%"></td>
+    <td width="50%"><img src="assets/grafana/datasource.png" alt="Data Sources" width="100%"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="assets/grafana/node-dash.png" alt="Node Exporter" width="100%"></td>
+    <td width="50%"><img src="assets/grafana/docker-dash.png" alt="Docker Containers" width="100%"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="assets/grafana/dash-blackbox-exporter.png" alt="Blackbox Exporter" width="100%"></td>
+    <td width="50%"><img src="assets/grafana/app-dash.png" alt="App Dashboard" width="100%"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="assets/grafana/drilldown-metrics.png" alt="Metrics Drilldown" width="100%"></td>
+    <td width="50%"><img src="assets/grafana/drilldown-logs.png" alt="Log Drilldown" width="100%"></td>
+  </tr>
+</table>
