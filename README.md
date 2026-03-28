@@ -3,6 +3,7 @@
 <div align="center">
 
 [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Hadolint](https://img.shields.io/badge/Hadolint-lightblue?logo=docker&logoColor=white)](https://github.com/hadolint/hadolint)
 [![Flask](https://img.shields.io/badge/Flask-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![MySQL](https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![NGINX](https://img.shields.io/badge/NGINX-009639?logo=nginx&logoColor=white)](https://nginx.org/)
@@ -23,6 +24,37 @@ This project is a fully containerized application stack built with production pr
 
 ![Architecture](assets/architecture/project_arch-light.png)
 
+
+## Dockerfile Linting
+
+Hadolint is used to lint `app/Dockerfile` against Dockerfile best-practice rules. Configuration lives in `.hadolint.yaml` at the project root.
+
+### Run hadolint
+
+**Docker (no install needed):**
+```bash
+docker run --rm -i hadolint/hadolint < app/Dockerfile
+```
+![hadolint output without config](assets/hadolint-no-config.png)
+
+**With the project config applied:**
+```bash
+docker run --rm -i \
+  -v "$(pwd)/.hadolint.yaml:/.config/hadolint.yaml" \
+  hadolint/hadolint < app/Dockerfile
+```
+![hadolint output with config](assets/hadolint-with-config.png)
+
+**If hadolint is installed locally:**
+```bash
+hadolint --config .hadolint.yaml app/Dockerfile
+```
+
+### Ignored rule
+
+`DL3008` — *Pin versions in apt-get install* — is intentionally ignored.
+
+---
 
 ## Prerequisites
 
@@ -148,6 +180,7 @@ See [secrets/README.md](./secrets/README.md).
 ```
 docker-stack/
 ├── docker-compose.yml
+├── .hadolint.yaml              # Hadolint Dockerfile linting config
 ├── app/                        # Flask application
 │   ├── Dockerfile
 │   ├── app.py

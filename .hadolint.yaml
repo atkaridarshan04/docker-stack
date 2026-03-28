@@ -1,0 +1,26 @@
+# Exit with a non-zero code only when violations at or above this severity are found.
+# Levels (low → high): info | warning | error | ignore
+failure-threshold: warning
+
+# Output format for lint results.
+# Options: tty | json | checkstyle | codeclimate | gitlab_codeclimate | gnu | codacy
+format: json
+
+# Rules to silence entirely.
+ignored:
+  - DL3008  # DL3008: Pin versions in apt-get install (e.g. gcc=12.2.0).
+
+# Suppress ANSI color codes in output (useful for CI log parsers).
+no-color: false
+
+# When true, always exit 0 regardless of violations (disables failure-threshold).
+no-fail: false
+
+# Require every key defined in label-schema to be present in the Dockerfile LABEL.
+strict-labels: true
+
+# Only allow base images pulled from these registries.
+# Images from any other registry will trigger a DL3026 warning.
+trustedRegistries:
+  - docker.io
+  - ghcr.io
