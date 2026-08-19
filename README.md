@@ -24,6 +24,44 @@ This project is a fully containerized application stack built with production pr
 
 ![Architecture](assets/architecture/project_arch-light.png)
 
+```mermaid
+flowchart TB
+    client(["Client"])
+
+    subgraph app_layer["Application"]
+        nginx["NGINX<br/>:80"]
+        flask["flask-app<br/>:5000"]
+        mysql[("MySQL<br/>:3306")]
+    end
+
+    subgraph observability["Observability"]
+        alloy["Alloy<br/>:12345"]
+        cadvisor["cAdvisor<br/>:8080"]
+        mysqld_exporter["mysqld-exporter<br/>:9104"]
+        blackbox["blackbox-exporter<br/>:9115"]
+        prometheus["Prometheus<br/>:9090"]
+        loki["Loki<br/>:3100"]
+        grafana["Grafana<br/>:3000"]
+    end
+
+    client --> nginx --> flask --> mysql
+
+    cadvisor -- reads container stats --> flask
+    mysqld_exporter -- credentials --> mysql
+    blackbox -- probes /health --> nginx
+    alloy -- tails container logs --> flask
+    alloy -- tails slow query log --> mysql
+
+    prometheus -- scrapes --> flask
+    prometheus -- scrapes --> cadvisor
+    prometheus -- scrapes --> mysqld_exporter
+    prometheus -- scrapes --> blackbox
+    alloy -- remote_write --> prometheus
+    alloy -- pushes logs --> loki
+
+    prometheus --> grafana
+    loki --> grafana
+```
 
 ## Dockerfile Linting
 
